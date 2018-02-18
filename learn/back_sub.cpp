@@ -2,6 +2,7 @@
 
 #include "opencv/cv.h"
 #include "opencv2/videoio.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/video/background_segm.hpp"
 
 const int MINARGS = 2;
@@ -18,7 +19,7 @@ int main(const int argc, const char* argv[] ) {
 
   if( argc < MINARGS + 1 ) {
     std::cerr << "Not enough args!" << std::endl;
-    std::cout << "back_sub <infile> <outfile>" << std::endl;
+    std::cout << "back_sub <infile> <outdir>" << std::endl;
     return RET_NEARGS;
   }
 
@@ -36,29 +37,20 @@ int main(const int argc, const char* argv[] ) {
     return RET_BADFILE;
   }
 
-  // create and set up the video writer object
-  cv::VideoWriter writer(argv[2], 
-      static_cast<int>(capture.get(cv::CAP_PROP_FOURCC)),
-      capture.get(cv::CAP_PROP_FPS), 
-      cv::Size( (int) capture.get(cv::CAP_PROP_FRAME_WIDTH),      
-                (int) capture.get(cv::CAP_PROP_FRAME_HEIGHT)));
-  if( !writer.isOpened() ) {
-    std::cerr << "Could not open file for writing: " << argv[2] << std::endl;
-    return RET_BADFILE;
-  }
-
   // process!
   while( capture.read(frame) ) {
     // update background model
     pMOG2->apply(frame, fgmask);
-
-    // write it to a new video
-    writer.write(fgmask);
+    // get frame number
+    std::stringstream ss;
+    ss << capture.get(cv::CAP_PROP_POS_FRAMES);
+    std::string frameNumberString = ss.str();
+    // write the images
+    cv::imwrite(std::string(argv[2]) + "/" + frameNumberString + ".png", fgmask);
   }
 
   // clean up when we're done
   capture.release();
-  writer.release();
 
   return RET_OK;
 }
