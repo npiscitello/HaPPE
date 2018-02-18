@@ -2,7 +2,7 @@
 
 #include "opencv/cv.h"
 #include "opencv2/videoio.hpp"
-#include "opencv2/video.hpp"
+#include "opencv2/video/background_segm.hpp"
 
 const int MINARGS = 2;
 
@@ -27,38 +27,34 @@ int main(const int argc, const char* argv[] ) {
   cv::Mat fgmask;
 
   // create actual background subtractor object - history, threshhold, shadow detect
-  pMOG2 = cv::createBackgroundSubtractorMOG2(500, 16, false);
+  pMOG2 = cv::createBackgroundSubtractorMOG2();
 
-  // create the object to read in/write out video frames
+  // create the object to read in video frames
   cv::VideoCapture capture(argv[1]);
   if( !capture.isOpened() ) {
     std::cerr << "Could not open file for reading: " << argv[1] << std::endl;
     return RET_BADFILE;
   }
 
-  // grab a frame to know what we're dealing with and create the video writer
-  capture.read(frame);
-  cv::VideoWriter writer(argv[2], cv::VideoWriter::fourcc('X', 'V', 'I', 'D'), 10, frame.size());
+  // create and set up the video writer object
+  cv::VideoWriter writer(argv[2], 
+      static_cast<int>(capture.get(cv::CAP_PROP_FOURCC)),
+      capture.get(cv::CAP_PROP_FPS), 
+      cv::Size( (int) capture.get(cv::CAP_PROP_FRAME_WIDTH),      
+                (int) capture.get(cv::CAP_PROP_FRAME_HEIGHT)));
   if( !writer.isOpened() ) {
     std::cerr << "Could not open file for writing: " << argv[2] << std::endl;
     return RET_BADFILE;
   }
 
   // process!
-  do {
+  while( capture.read(frame) ) {
     // update background model
     pMOG2->apply(frame, fgmask);
 
-    // annotate with frame number
-    std::stringstream ss;
-    rectangle(fgmask, cv::Point(10, 2), cv::Point(50,20), cv::Scalar(255,255,255), -1);
-    ss << capture.get(cv::CAP_PROP_POS_FRAMES);
-    std::string frameNumberString = ss.str();
-    putText(fgmask, frameNumberString.c_str(), cv::Point(15, 15), cv::FONT_HERSHEY_SIMPLEX, 0.5 , cv::Scalar(0,0,0));
-
     // write it to a new video
     writer.write(fgmask);
-  } while( capture.read(frame) );
+  }
 
   // clean up when we're done
   capture.release();
