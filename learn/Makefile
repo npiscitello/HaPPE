@@ -8,4 +8,4 @@ LDFLAGS			:= -L/usr/local/lib64 \
 								-lopencv_videoio
 
 %: %.cpp
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
