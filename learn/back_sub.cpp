@@ -28,7 +28,7 @@ int main(const int argc, const char* argv[] ) {
   cv::Mat fgmask;
 
   // create actual background subtractor object - history, threshhold, shadow detect
-  pMOG2 = cv::createBackgroundSubtractorMOG2();
+  pMOG2 = cv::createBackgroundSubtractorMOG2(500, 500, false);
 
   // create the object to read in video frames
   cv::VideoCapture capture(argv[1]);
