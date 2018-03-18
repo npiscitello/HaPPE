@@ -34,13 +34,16 @@ int main(const int argc, const char* argv[] ) {
   cv::Mat blurframe;
   cv::Mat blobframe;
   std::vector<cv::KeyPoint> keypoints;
-  
+
   // temp storage for intermediate images
   std::string folder_path = std::string(argv[2]) + "_frames";
   mkdir(folder_path.c_str(), S_IRWXU | S_IRWXG);
+  mkdir((folder_path + "/" + "fgmask").c_str(), S_IRWXU | S_IRWXG);
+  mkdir((folder_path + "/" + "blurframe").c_str(), S_IRWXU | S_IRWXG);
+  mkdir((folder_path + "/" + "blobframe").c_str(), S_IRWXU | S_IRWXG);
 
   // create actual background subtractor object - history, threshhold, shadow detect
-  pMOG2 = cv::createBackgroundSubtractorMOG2(500, 500, false);
+  pMOG2 = cv::createBackgroundSubtractorMOG2(500, 700, false);
   // set up blob detection object
   cv::SimpleBlobDetector::Params params;
   params.filterByColor = true;
@@ -48,7 +51,7 @@ int main(const int argc, const char* argv[] ) {
   params.filterByCircularity = false;
   params.filterByInertia = false;
   params.filterByArea = true;
-  params.minArea = 2000;
+  params.minArea = 3000;
   params.maxArea = 50000;
   params.filterByConvexity = false;
   detector = cv::SimpleBlobDetector::create(params);
@@ -62,6 +65,11 @@ int main(const int argc, const char* argv[] ) {
 
   // process!
   while( capture.read(inframe) ) {
+    // get frame number
+    std::stringstream ss;
+    ss << capture.get(cv::CAP_PROP_POS_FRAMES);
+    std::string frameNumberString = ss.str();
+
     // update background model
     pMOG2->apply(inframe, fgmask);
     // filter the image to make coherent blobs
@@ -75,12 +83,10 @@ int main(const int argc, const char* argv[] ) {
                         cv::Scalar(0,0,255), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-    // get frame number
-    std::stringstream ss;
-    ss << capture.get(cv::CAP_PROP_POS_FRAMES);
-    std::string frameNumberString = ss.str();
     // write the images
-    cv::imwrite(folder_path + "/" + frameNumberString + ".png", blobframe);
+    cv::imwrite(folder_path + "/fgmask/" + frameNumberString + ".png", fgmask);
+    cv::imwrite(folder_path + "/blurframe/" + frameNumberString + ".png", blurframe);
+    cv::imwrite(folder_path + "/blobframe/" + frameNumberString + ".png", blobframe);
   }
 
   // clean up when we're done
