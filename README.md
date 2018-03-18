@@ -22,7 +22,5 @@ opencv: `PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR:/path/to/cross/compiled/ffmpeg/lib
 * ~~the above instructions produce a vanilla opencv (with NO ffmpeg) - I still haven't gotten an
   openCV with ffmpeg build to compile~~ Builds, but has not been tested yet
 
-
-# ToDo
-
-* Can we license under the GPL? How much ownership does Wentworth have over this?
+## Notes
+convert frames to video:  `ffmpeg -r <framerate> -i path/to/numbered/frame/images/%d.png -shortest -pix_fmt yuv420p path/to/output.mp4`

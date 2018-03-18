@@ -3,11 +3,13 @@
 #include <string>
 
 #include "opencv/cv.h"
-#include "opencv2/videoio.hpp"
+
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/imgproc.hpp"
-#include "opencv2/video/background_segm.hpp"
 #include "opencv2/features2d.hpp"
+
+#include "opencv2/videoio.hpp"
+#include "opencv2/video/background_segm.hpp"
 
 const int MINARGS = 2;
 

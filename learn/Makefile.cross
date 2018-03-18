@@ -1,0 +1,19 @@
+CC 					:= arm-linux-gnueabihf-g++
+
+CFLAGS			:= -I/opt/cross/rpi/rootfs/usr/include \
+			    			-I/opt/cross/rpi/rootfs/usr/include/arm-linux-gnueabihf/ \
+								-I/home/npiscitello/custom_build/opencv_cross/build/install_dir/include/
+
+LDFLAGS 		:= -L/opt/cross/rpi/rootfs/usr/lib \
+								-L/home/npiscitello/custom_build/opencv_cross/build/install_dir/lib \
+								-lopencv_core \
+								-lopencv_imgcodecs \
+								-lopencv_imgproc \
+								-lopencv_video \
+								-lopencv_videoio \
+								-lopencv_features2d \
+								-lopencv_flann \
+								-lopencv_highgui
+
+%: %.cpp
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
