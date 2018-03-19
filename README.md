@@ -23,4 +23,4 @@ opencv: `PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR:/path/to/cross/compiled/ffmpeg/lib
   openCV with ffmpeg build to compile~~ Builds, but has not been tested yet
 
 ## Notes
-convert frames to video:  `ffmpeg -r <framerate> -i path/to/numbered/frame/images/%d.png -shortest -pix_fmt yuv420p path/to/output.mp4`
+convert frames to video:  `ffmpeg -r <framerate> -i path/to/numbered/frame/images/%d.png -pix_fmt yuv420p path/to/output.mp4`

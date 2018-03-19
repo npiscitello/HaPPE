@@ -47,7 +47,11 @@ int main(const int argc, const char* argv[] ) {
   mkdir((folder_path + "/" + "result").c_str(), S_IRWXU | S_IRWXG);
 
   // create actual background subtractor object - history, threshhold, shadow detect
-  pMOG2 = cv::createBackgroundSubtractorMOG2(10000, 1500, false);
+  pMOG2 = cv::createBackgroundSubtractorMOG2(20, 2000, false);
+
+  // filter size
+  cv::Size filter_size = cv::Size(50,75);
+
   // set up blob detection object
   cv::SimpleBlobDetector::Params params;
   params.filterByColor = true;
@@ -55,10 +59,11 @@ int main(const int argc, const char* argv[] ) {
   params.filterByCircularity = false;
   params.filterByInertia = false;
   params.filterByArea = true;
-  params.minArea = 3000;
+  params.minArea = 5000;
   params.maxArea = 50000;
   params.filterByConvexity = false;
   detector = cv::SimpleBlobDetector::create(params);
+
   // define min and max color threshhold
   cv::Scalar min_color = cv::Scalar(50,0,150);
   cv::Scalar max_color = cv::Scalar(100,50,255);
@@ -92,7 +97,7 @@ int main(const int argc, const char* argv[] ) {
     // update background model
     pMOG2->apply(inframe, fgmask);
     // filter the image to make coherent blobs
-    cv::morphologyEx(fgmask, blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(20,20)));
+    cv::morphologyEx(fgmask, blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, filter_size));
     // find blobs
     detector->detect(blurframe, keypoints);
     // draw blobs on video
