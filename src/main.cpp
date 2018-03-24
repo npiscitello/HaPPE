@@ -1,6 +1,7 @@
-#include <iostream>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <string>
+#include <errno.h>
 
 #include "opencv/cv.h"
 
@@ -25,8 +26,9 @@ cv::Ptr<cv::SimpleBlobDetector> detector;
 int main(const int argc, const char* argv[] ) {
 
   if( argc < MINARGS + 1 ) {
-    std::cerr << "Not enough args!" << std::endl;
-    std::cout << "demo <infile> <outfile>" << std::endl;
+    printf("Not enough args!\n");
+    printf("demo <infile> <frames output folder>\n");
+    printf("Full paths (no '..', '~', etc.) required\n");
     return RET_NEARGS;
   }
 
@@ -38,13 +40,19 @@ int main(const int argc, const char* argv[] ) {
   cv::Mat result;
   std::vector<cv::KeyPoint> keypoints;
 
-  // temp storage for intermediate images
-  std::string folder_path = std::string(argv[2]) + "_frames";
+  // storage for intermediate images and metadata
+  std::string folder_path = std::string(argv[2]);
   mkdir(folder_path.c_str(), S_IRWXU | S_IRWXG);
   mkdir((folder_path + "/" + "fgmask").c_str(), S_IRWXU | S_IRWXG);
   mkdir((folder_path + "/" + "blurframe").c_str(), S_IRWXU | S_IRWXG);
   mkdir((folder_path + "/" + "thresh").c_str(), S_IRWXU | S_IRWXG);
   mkdir((folder_path + "/" + "result").c_str(), S_IRWXU | S_IRWXG);
+  FILE* metadata = fopen((folder_path + "/metadata.csv").c_str(), "w+");
+  if( metadata == NULL ) {
+    printf("Couldn't make file: %s\n", strerror(errno));
+    return RET_BADFILE;
+  }
+  fprintf(metadata, "frame number,moving body count,ppe count\n");
 
   // create actual background subtractor object - history, threshhold, shadow detect
   pMOG2 = cv::createBackgroundSubtractorMOG2(20, 2000, false);
@@ -65,8 +73,10 @@ int main(const int argc, const char* argv[] ) {
   detector = cv::SimpleBlobDetector::create(params);
 
   // define min and max color threshhold
-  cv::Scalar min_color = cv::Scalar(50,0,150);
-  cv::Scalar max_color = cv::Scalar(100,50,255);
+  //cv::Scalar min_color = cv::Scalar(50,0,150);
+  //cv::Scalar max_color = cv::Scalar(150,100,255);
+  cv::Scalar min_color = cv::Scalar(56,37,161);
+  cv::Scalar max_color = cv::Scalar(100,75,255);
   // color to copy in for the color threshholded values
   cv::Scalar indication_color = cv::Scalar(0,255,0);
   cv::Mat indication_img;
@@ -74,7 +84,7 @@ int main(const int argc, const char* argv[] ) {
   // create the object to read in video frames
   cv::VideoCapture capture(argv[1]);
   if( !capture.isOpened() ) {
-    std::cerr << "Could not open file for reading: " << argv[1] << std::endl;
+    printf("Could not open file for reading: %s", argv[1]);
     return RET_BADFILE;
   }
 
@@ -125,10 +135,17 @@ int main(const int argc, const char* argv[] ) {
     cv::imwrite(folder_path + "/blurframe/" + frameNumberString + ".png", blurframe);
     cv::imwrite(folder_path + "/thresh/" + frameNumberString + ".png", thresh);
     cv::imwrite(folder_path + "/result/" + frameNumberString + ".png", result);
+
+    // frame number, moving body count, ppe count
+    fprintf(metadata, "%s,%zu,%d\n",
+        frameNumberString.c_str(),
+        keypoints.size(),
+        0);
   } while( capture.read(inframe) );
 
   // clean up when we're done
   capture.release();
+  fclose(metadata);
 
   return RET_OK;
 }
