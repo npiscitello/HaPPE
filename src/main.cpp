@@ -34,18 +34,20 @@ int main(const int argc, const char* argv[] ) {
 
   // storage for frames and blob data
   cv::Mat inframe;
-  cv::Mat fgmask;
-  cv::Mat blurframe;
-  cv::Mat thresh;
+  cv::Mat m_fgmask;
+  cv::Mat m_blurframe;
+  cv::Mat p_thresh;
+  cv::Mat p_blurframe;
   cv::Mat result;
   std::vector<cv::KeyPoint> keypoints;
 
   // storage for intermediate images and metadata
   std::string folder_path = std::string(argv[2]);
   mkdir(folder_path.c_str(), S_IRWXU | S_IRWXG);
-  mkdir((folder_path + "/" + "fgmask").c_str(), S_IRWXU | S_IRWXG);
-  mkdir((folder_path + "/" + "blurframe").c_str(), S_IRWXU | S_IRWXG);
-  mkdir((folder_path + "/" + "thresh").c_str(), S_IRWXU | S_IRWXG);
+  mkdir((folder_path + "/" + "m_fgmask").c_str(), S_IRWXU | S_IRWXG);
+  mkdir((folder_path + "/" + "m_blurframe").c_str(), S_IRWXU | S_IRWXG);
+  mkdir((folder_path + "/" + "p_thresh").c_str(), S_IRWXU | S_IRWXG);
+  mkdir((folder_path + "/" + "p_blurframe").c_str(), S_IRWXU | S_IRWXG);
   mkdir((folder_path + "/" + "result").c_str(), S_IRWXU | S_IRWXG);
   FILE* metadata = fopen((folder_path + "/metadata.csv").c_str(), "w+");
   if( metadata == NULL ) {
@@ -58,7 +60,8 @@ int main(const int argc, const char* argv[] ) {
   pMOG2 = cv::createBackgroundSubtractorMOG2(20, 2000, false);
 
   // filter size
-  cv::Size filter_size = cv::Size(50,75);
+  cv::Size m_filter_size = cv::Size(50,75);
+  cv::Size p_filter_size = cv::Size(25,25);
 
   // set up blob detection object
   cv::SimpleBlobDetector::Params params;
@@ -101,26 +104,34 @@ int main(const int argc, const char* argv[] ) {
     ss << capture.get(cv::CAP_PROP_POS_FRAMES);
     std::string frameNumberString = ss.str();
 
-    // threshhold for color
-    cv::inRange(inframe, min_color, max_color, thresh);
-
+    /***********************************
+     * Human Body Detection
+     ***********************************/
     // update background model
-    pMOG2->apply(inframe, fgmask);
+    pMOG2->apply(inframe, m_fgmask);
     // filter the image to make coherent blobs
-    cv::morphologyEx(fgmask, blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, filter_size));
+    cv::morphologyEx(m_fgmask, m_blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, m_filter_size));
     // find blobs
-    detector->detect(blurframe, keypoints);
+    detector->detect(m_blurframe, keypoints);
     // draw blobs on video
-    cv::drawKeypoints(  fgmask, 
+    cv::drawKeypoints(  m_fgmask, 
                         keypoints, 
-                        fgmask, 
+                        m_fgmask, 
                         cv::Scalar(0,0,255), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    cv::drawKeypoints(  blurframe, 
+    cv::drawKeypoints(  m_blurframe, 
                         keypoints, 
-                        blurframe, 
+                        m_blurframe, 
                         cv::Scalar(0,0,255), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+
+    /***********************************
+     * PPE Detection
+     ***********************************/
+    // threshhold for color
+    cv::inRange(inframe, min_color, max_color, p_thresh);
+    // filter the image to make coherent blobs
+    cv::morphologyEx(p_thresh, p_blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, p_filter_size));
 
     // prepare result frame
     cv::drawKeypoints(  inframe, 
@@ -128,12 +139,13 @@ int main(const int argc, const char* argv[] ) {
                         result, 
                         cv::Scalar(0,0,255), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    indication_img.copyTo(result, thresh);
+    indication_img.copyTo(result, p_blurframe);
 
     // write the images
-    cv::imwrite(folder_path + "/fgmask/" + frameNumberString + ".png", fgmask);
-    cv::imwrite(folder_path + "/blurframe/" + frameNumberString + ".png", blurframe);
-    cv::imwrite(folder_path + "/thresh/" + frameNumberString + ".png", thresh);
+    cv::imwrite(folder_path + "/m_fgmask/" + frameNumberString + ".png", m_fgmask);
+    cv::imwrite(folder_path + "/m_blurframe/" + frameNumberString + ".png", m_blurframe);
+    cv::imwrite(folder_path + "/p_thresh/" + frameNumberString + ".png", p_thresh);
+    cv::imwrite(folder_path + "/p_blurframe/" + frameNumberString + ".png", p_blurframe);
     cv::imwrite(folder_path + "/result/" + frameNumberString + ".png", result);
 
     // frame number, moving body count, ppe count
