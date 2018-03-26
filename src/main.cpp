@@ -12,6 +12,17 @@
 #include "opencv2/videoio.hpp"
 #include "opencv2/video/background_segm.hpp"
 
+// how many pieces of PPE each person requires
+#define PPE_PER_PERSON 2
+
+// how many consecutive frames the system must be in 
+// an alarm state for the alarm to actually go off
+#define ALARM_THRESH 3
+
+// values for alarm control function
+#define ALARM_TRIGGER 1
+#define ALARM_RESET 0
+
 const int MINARGS = 2;
 
 enum retvals {
@@ -21,7 +32,10 @@ enum retvals {
 };
 
 cv::Ptr<cv::BackgroundSubtractorMOG2> pMOG2;
-cv::Ptr<cv::SimpleBlobDetector> detector;
+cv::Ptr<cv::SimpleBlobDetector> m_detector;
+cv::Ptr<cv::SimpleBlobDetector> p_detector;
+
+void control_alarm( uint8_t state );
 
 int main(const int argc, const char* argv[] ) {
 
@@ -32,14 +46,16 @@ int main(const int argc, const char* argv[] ) {
     return RET_NEARGS;
   }
 
-  // storage for frames and blob data
+  // state storage for frames and blob data
   cv::Mat inframe;
   cv::Mat m_fgmask;
   cv::Mat m_blurframe;
   cv::Mat p_thresh;
   cv::Mat p_blurframe;
   cv::Mat result;
-  std::vector<cv::KeyPoint> keypoints;
+  std::vector<cv::KeyPoint> m_keypoints;
+  std::vector<cv::KeyPoint> p_keypoints;
+  uint16_t alarm_frame_count = 0;
 
   // storage for intermediate images and metadata
   std::string folder_path = std::string(argv[2]);
@@ -54,7 +70,7 @@ int main(const int argc, const char* argv[] ) {
     printf("Couldn't make file: %s\n", strerror(errno));
     return RET_BADFILE;
   }
-  fprintf(metadata, "frame number,moving body count,ppe count\n");
+  fprintf(metadata, "frame_number,moving_body_count,ppe_count,alarm\n");
 
   // create actual background subtractor object - history, threshhold, shadow detect
   pMOG2 = cv::createBackgroundSubtractorMOG2(20, 2000, false);
@@ -63,22 +79,31 @@ int main(const int argc, const char* argv[] ) {
   cv::Size m_filter_size = cv::Size(50,75);
   cv::Size p_filter_size = cv::Size(25,25);
 
-  // set up blob detection object
+  // set up motion blob detection object
   cv::SimpleBlobDetector::Params params;
   params.filterByColor = true;
   params.blobColor = 255;
   params.filterByCircularity = false;
   params.filterByInertia = false;
   params.filterByArea = true;
-  params.minArea = 5000;
+  params.minArea = 10000;
   params.maxArea = 50000;
   params.filterByConvexity = false;
-  detector = cv::SimpleBlobDetector::create(params);
+  m_detector = cv::SimpleBlobDetector::create(params);
+
+  // set up motion blob detection object
+  params.filterByColor = true;
+  params.blobColor = 255;
+  params.filterByCircularity = false;
+  params.filterByInertia = false;
+  params.filterByArea = true;
+  params.minArea = 250;
+  params.maxArea = 1500;
+  params.filterByConvexity = false;
+  p_detector = cv::SimpleBlobDetector::create(params);
 
   // define min and max color threshhold
-  //cv::Scalar min_color = cv::Scalar(50,0,150);
-  //cv::Scalar max_color = cv::Scalar(150,100,255);
-  cv::Scalar min_color = cv::Scalar(56,37,161);
+  cv::Scalar min_color = cv::Scalar(75,50,161);
   cv::Scalar max_color = cv::Scalar(100,75,255);
   // color to copy in for the color threshholded values
   cv::Scalar indication_color = cv::Scalar(0,255,0);
@@ -112,15 +137,15 @@ int main(const int argc, const char* argv[] ) {
     // filter the image to make coherent blobs
     cv::morphologyEx(m_fgmask, m_blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, m_filter_size));
     // find blobs
-    detector->detect(m_blurframe, keypoints);
+    m_detector->detect(m_blurframe, m_keypoints);
     // draw blobs on video
     cv::drawKeypoints(  m_fgmask, 
-                        keypoints, 
+                        m_keypoints, 
                         m_fgmask, 
                         cv::Scalar(0,0,255), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
     cv::drawKeypoints(  m_blurframe, 
-                        keypoints, 
+                        m_keypoints, 
                         m_blurframe, 
                         cv::Scalar(0,0,255), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
@@ -132,14 +157,20 @@ int main(const int argc, const char* argv[] ) {
     cv::inRange(inframe, min_color, max_color, p_thresh);
     // filter the image to make coherent blobs
     cv::morphologyEx(p_thresh, p_blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, p_filter_size));
+    // find blobs
+    p_detector->detect(p_blurframe, p_keypoints);
 
     // prepare result frame
     cv::drawKeypoints(  inframe, 
-                        keypoints, 
+                        m_keypoints, 
                         result, 
                         cv::Scalar(0,0,255), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    indication_img.copyTo(result, p_blurframe);
+    cv::drawKeypoints(  result, 
+                        p_keypoints, 
+                        result, 
+                        cv::Scalar(0,255,0), 
+                        cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
     // write the images
     cv::imwrite(folder_path + "/m_fgmask/" + frameNumberString + ".png", m_fgmask);
@@ -148,11 +179,29 @@ int main(const int argc, const char* argv[] ) {
     cv::imwrite(folder_path + "/p_blurframe/" + frameNumberString + ".png", p_blurframe);
     cv::imwrite(folder_path + "/result/" + frameNumberString + ".png", result);
 
+    // increment or reset frame count
+    if( m_keypoints.size() * PPE_PER_PERSON >= p_keypoints.size() ) {
+      alarm_frame_count++;
+    } else {
+      alarm_frame_count = 0;
+    }
+
+    // do we need to trigger the alarm?
+    if( alarm_frame_count >= ALARM_THRESH ) {
+      control_alarm( ALARM_TRIGGER );
+      fprintf(metadata, "!!!ALARM!!!\n");
+    } else {
+      control_alarm( ALARM_RESET );
+      fprintf(metadata, "<no alarm>\n");
+    }
+
+    // log data
     // frame number, moving body count, ppe count
-    fprintf(metadata, "%s,%zu,%d\n",
+    fprintf(metadata, "%s,%zu,%zu,%d\n",
         frameNumberString.c_str(),
-        keypoints.size(),
-        0);
+        m_keypoints.size(),
+        p_keypoints.size(),
+        m_keypoints.size() * PPE_PER_PERSON > p_keypoints.size());
   } while( capture.read(inframe) );
 
   // clean up when we're done
@@ -161,3 +210,18 @@ int main(const int argc, const char* argv[] ) {
 
   return RET_OK;
 }
+
+// trigger or reset alarm
+// pass a 1 to trigger the alarm or a zero to reset it
+void control_alarm( uint8_t state ) {
+  switch( state ) {
+    case ALARM_RESET:
+      break;
+    case ALARM_TRIGGER:
+      break;
+    default:
+      break;
+  }
+  return;
+}
+
