@@ -7,3 +7,13 @@ back_sub
 blobs
 demo
 thresh
+
+.dep
+*.eep
+*.elf
+*.map
+*.lss
+*.lst
+*.map
+*.o
+*.sym
