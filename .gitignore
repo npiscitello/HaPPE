@@ -11,7 +11,7 @@ thresh
 .dep
 *.eep
 *.elf
-*.map
+*.hex
 *.lss
 *.lst
 *.map
