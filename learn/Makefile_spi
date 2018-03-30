@@ -1,0 +1,15 @@
+CC 					:= 	arm-linux-gnueabihf-g++
+
+CFLAGS			:= 	-I/opt/cross/rpi/rootfs/usr/include \
+			    			-I/opt/cross/rpi/rootfs/usr/include/arm-linux-gnueabihf/ \
+								-I/home/npiscitello/cross_build/wiringPi/wiringPi/
+
+LDFLAGS 		:= 	-L/opt/cross/rpi/rootfs/usr/lib \
+								-L/home/npiscitello/cross_build/install/lib/ \
+								-lwiringPi
+
+.PHONY: all
+all: spi
+
+spi: spi.cpp
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@

@@ -45,7 +45,8 @@ flags = [
 # gets updated. Run 'echo | clang -v -E -x c++ -' and replace these paths with anything
 # under the '#include <...> search starts here:' headings. You'll probably only have to
 # change the numbers.
-'-isystem', '/usr/local/include/'
+'-isystem', '/usr/local/include/',
+'-isystem', '/home/npiscitello/cross_build/wiringPi/wiringPi/'
 ]
 
 
