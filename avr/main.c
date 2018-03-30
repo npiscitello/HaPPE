@@ -32,7 +32,7 @@ int main(void) {
 
   // the SPI bus is entirely responsive (slave), so let it wait for stuff
   while(1){
-    SPDR = spi_byte;
+    SPDR = 0x7E;
     asm("nop");
     asm("nop");
     asm("nop");

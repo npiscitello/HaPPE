@@ -8,7 +8,7 @@
 
 int main() {
 
-  wiringPiSPISetup(CHANNEL, 50000);
+  wiringPiSPISetup(CHANNEL, 1000);
 
   uint8_t buffer;
 
