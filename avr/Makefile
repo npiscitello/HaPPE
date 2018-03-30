@@ -41,7 +41,7 @@
 
 
 # MCU name
-MCU = atmega328p
+MCU = atmega328
 
 
 # Processor frequency.
@@ -62,7 +62,7 @@ MCU = atmega328p
 #         F_CPU = 16000000
 #         F_CPU = 18432000
 #         F_CPU = 20000000
-F_CPU = 16000000
+F_CPU = 1000000
 
 
 # Output format. (can be srec, ihex, binary)

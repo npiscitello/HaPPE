@@ -10,7 +10,7 @@
 #include <util/twi.h>
 
 // must be 7 bits
-#define TWI_ADDR 0x01
+#define TWI_ADDR 0x33
 
 volatile uint8_t twi_byte = 0x00;
 
@@ -21,10 +21,17 @@ int main(void) {
 
   // setup TWI - see pages 279 and 283. Start in SR mode.
   // set the slave address
-  TWAR = (TWI_ADDR << 1) && 0x01;
+  TWAR = (TWI_ADDR << 1) | 0x01;
   // enable the TWI (TWEN) with interrupts (TWIE) and 
   // connect it to the bus (TWEA) in slave mode (TWSTA)
   TWCR = 0x00 | _BV(TWEA) | _BV(TWEN) | _BV(TWIE);
+
+  // enable interrupts globally
+  sei();
+
+  // FOR DEBUG
+  // enable output on pins 14-19
+  DDRB |= 0x00 | _BV(DDB0) | _BV(DDB1) | _BV(DDB2) | _BV(DDB3) | _BV(DDB4) | _BV(DDB5);
 
   // the I2C bus is entirely responsive (slave), so let it wait for stuff
   while(1){};
@@ -45,6 +52,8 @@ ISR(TWI_vect) {
     case 0x78:
       // receive data byte, return ACK
       TWCR |= _BV(TWINT) | _BV(TWEA);
+      // debug LED
+      PORTB |= _BV(DDB0);
       break;
 
     // Intentional fallthrough - we got data!
@@ -55,12 +64,16 @@ ISR(TWI_vect) {
       // store data byte, return ACK
       twi_byte = TWDR;
       TWCR |= _BV(TWINT) | _BV(TWEA);
+      // debug LED
+      PORTB |= _BV(DDB1);
       break;
 
     // stop or repeated start
     case 0xA0:
       // eh, ignore. Make sure we'll be listening.
       TWCR |= _BV(TWINT) | _BV(TWEA);
+      // debug LED
+      PORTB |= _BV(DDB2);
       break;
 
     // Slave Transmitter mode
@@ -72,6 +85,8 @@ ISR(TWI_vect) {
       // this is the only byte we're sending
       TWCR |= _BV(TWINT);
       TWCR &= ~_BV(TWEA);
+      // debug LED
+      PORTB |= _BV(DDB3);
       break;
 
     // intentional fallthrough - these shouldn't occur (non-last data byte transmitted)
@@ -83,6 +98,8 @@ ISR(TWI_vect) {
     case 0xC8:
       // reset the system
       TWCR |= _BV(TWINT) | _BV(TWEA);
+      // debug LED
+      PORTB |= _BV(DDB4);
       break;
 
     // something went really wrong...
