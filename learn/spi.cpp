@@ -1,17 +1,22 @@
+#include <stdio.h>
+#include <stdint.h>
+
 #include "wiringPi.h"
+#include "wiringPiSPI.h"
+
+#define CHANNEL 0
 
 int main() {
 
-  wiringPiSetup();
+  wiringPiSPISetup(CHANNEL, 50000);
 
-  // pin 29 = physical pin 21, don't ask me why
-  pinMode(29, OUTPUT);
+  uint8_t buffer;
 
-  while(1) {
-    digitalWrite(29, HIGH);
-    delay(500);
-    digitalWrite(29, LOW);
-    delay(500);
+  for( uint8_t i = 0; ; i++ ) {
+    buffer = i;
+    wiringPiSPIDataRW(CHANNEL, &buffer, 1);
+    printf("sent: %d, received: %d\n", i, buffer);
+    delay(1000);
   }
 
   return 0;
