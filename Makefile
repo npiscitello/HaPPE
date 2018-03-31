@@ -6,7 +6,6 @@ local: LDFLAGS	= 	-L/usr/local/lib64 \
 										-lopencv_imgproc \
 										-lopencv_features2d \
 										-lopencv_videoio \
-										-lopencv_video
 
 cross: CC 			=		arm-linux-gnueabihf-g++
 cross: CFLAGS		= 	-I/opt/cross/rpi/rootfs/usr/include \
@@ -17,7 +16,6 @@ cross: LDFLAGS 	=		-L/opt/cross/rpi/rootfs/usr/lib \
 										-lopencv_core \
 										-lopencv_imgcodecs \
 										-lopencv_imgproc \
-										-lopencv_video \
 										-lopencv_videoio \
 										-lopencv_features2d \
 										-lopencv_flann \

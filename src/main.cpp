@@ -6,11 +6,11 @@
 #include "opencv/cv.h"
 
 #include "opencv2/imgcodecs.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/imgproc.hpp"
 #include "opencv2/features2d.hpp"
 
 #include "opencv2/videoio.hpp"
-#include "opencv2/video/background_segm.hpp"
 
 // how many pieces of PPE each person requires
 #define PPE_PER_PERSON 2
@@ -31,20 +31,18 @@ enum retvals {
   RET_BADFILE = 2
 };
 
-cv::Ptr<cv::BackgroundSubtractorMOG2> pMOG2;
 cv::Ptr<cv::SimpleBlobDetector> m_detector;
 cv::Ptr<cv::SimpleBlobDetector> p_detector;
 
+cv::Mat first_frame;
+
+cv::Mat backsub(cv::Mat frame);
+cv::Mat filter_frame(cv::Mat frame);
+
 void control_alarm( uint8_t state );
 
-int main(const int argc, const char* argv[] ) {
-
-  if( argc < MINARGS + 1 ) {
-    printf("Not enough args!\n");
-    printf("demo <infile> <frames output folder>\n");
-    printf("Full paths (no '..', '~', etc.) required\n");
-    return RET_NEARGS;
-  }
+//int main(const int argc, const char* argv[] ) {
+int main() {
 
   // state storage for frames and blob data
   cv::Mat inframe;
@@ -58,6 +56,13 @@ int main(const int argc, const char* argv[] ) {
   uint16_t alarm_frame_count = 0;
 
   /*
+  if( argc < MINARGS + 1 ) {
+    printf("Not enough args!\n");
+    printf("demo <infile> <frames output folder>\n");
+    printf("Full paths (no '..', '~', etc.) required\n");
+    return RET_NEARGS;
+  }
+
   // storage for intermediate images and metadata
   std::string folder_path = std::string(argv[2]);
   mkdir(folder_path.c_str(), S_IRWXU | S_IRWXG);
@@ -74,12 +79,16 @@ int main(const int argc, const char* argv[] ) {
   fprintf(metadata, "frame_number,moving_body_count,ppe_count,alarm\n");
   */
 
-  // create actual background subtractor object - history, threshhold, shadow detect
-  pMOG2 = cv::createBackgroundSubtractorMOG2(20, 2000, false);
-
-  // filter size
+  // filter sizes
   cv::Size m_filter_size = cv::Size(50,75);
   cv::Size p_filter_size = cv::Size(25,25);
+
+  // define min and max color threshhold
+  cv::Scalar min_color = cv::Scalar(200,125,125);
+  cv::Scalar max_color = cv::Scalar(255,200,200);
+  // color to copy in for the color threshholded values
+  cv::Scalar indication_color = cv::Scalar(0,255,0);
+  cv::Mat indication_img;
 
   // set up motion blob detection object
   cv::SimpleBlobDetector::Params params;
@@ -93,7 +102,7 @@ int main(const int argc, const char* argv[] ) {
   params.filterByConvexity = false;
   m_detector = cv::SimpleBlobDetector::create(params);
 
-  // set up threshhold blob detection object
+  // set up PPE blob detection object
   params.filterByColor = true;
   params.blobColor = 255;
   params.filterByCircularity = false;
@@ -103,13 +112,6 @@ int main(const int argc, const char* argv[] ) {
   params.maxArea = 1500;
   params.filterByConvexity = false;
   p_detector = cv::SimpleBlobDetector::create(params);
-
-  // define min and max color threshhold
-  cv::Scalar min_color = cv::Scalar(200,125,125);
-  cv::Scalar max_color = cv::Scalar(255,200,200);
-  // color to copy in for the color threshholded values
-  cv::Scalar indication_color = cv::Scalar(0,255,0);
-  cv::Mat indication_img;
 
   // create the object to read in video frames
   //cv::VideoCapture capture(argv[1]);
@@ -123,15 +125,18 @@ int main(const int argc, const char* argv[] ) {
   capture.set(cv::CAP_PROP_FRAME_HEIGHT, 270);
 
   // set up first run stuff
-  capture.read(inframe);
-  indication_img.create(inframe.rows, inframe.cols, inframe.type());
+  capture.read(first_frame);
+  indication_img.create(first_frame.rows, first_frame.cols, first_frame.type());
+  indication_img.setTo(indication_color);
+  first_frame = filter_frame(first_frame);
+  indication_img.create(first_frame.rows, first_frame.cols, first_frame.type());
   indication_img.setTo(indication_color);
 
   printf("Set up capturing!\n");
 
   // process!
-  do {
-    result = inframe;
+  while(capture.read(inframe)) {
+
     /*
     // get frame number
     std::stringstream ss;
@@ -143,12 +148,13 @@ int main(const int argc, const char* argv[] ) {
      * Human Body Detection
      ***********************************/
     printf("Starting motion detection...\n");
-    // update background model
-    pMOG2->apply(inframe, m_fgmask);
+    // subtract the background
+    m_fgmask = backsub(inframe);
     // filter the image to make coherent blobs
     cv::morphologyEx(m_fgmask, m_blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, m_filter_size));
     // find blobs
     m_detector->detect(m_blurframe, m_keypoints);
+    /*
     // draw blobs on video
     cv::drawKeypoints(  m_fgmask, 
                         m_keypoints, 
@@ -160,6 +166,7 @@ int main(const int argc, const char* argv[] ) {
                         m_blurframe, 
                         cv::Scalar(0,0,255), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+    */
 
     /***********************************
      * PPE Detection
@@ -172,6 +179,7 @@ int main(const int argc, const char* argv[] ) {
     // find blobs
     p_detector->detect(p_blurframe, p_keypoints);
 
+    /*
     // prepare result frame
     cv::drawKeypoints(  inframe, 
                         m_keypoints, 
@@ -183,6 +191,7 @@ int main(const int argc, const char* argv[] ) {
                         result, 
                         cv::Scalar(0,255,0), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+    */
 
     /*
     // write the images
@@ -218,7 +227,7 @@ int main(const int argc, const char* argv[] ) {
     */
 
     printf("Processed a frame!\n");
-  } while( capture.read(inframe) );
+  }
 
   // clean up when we're done
   capture.release();
@@ -240,3 +249,21 @@ void control_alarm( uint8_t state ) {
   return;
 }
 
+// will return an empty Mat if it couldn't get a frame
+cv::Mat filter_frame(cv::Mat frame) {
+  cv::Mat retframe;
+  // we don't care about color
+  cv::cvtColor(frame, retframe, CV_BGR2GRAY);
+  // we need to filter out high freq noise
+  cv::GaussianBlur(retframe, retframe, cv::Size(25,25), 0);
+  return retframe;
+}
+
+cv::Mat backsub(cv::Mat frame) {
+  cv::Mat retframe = filter_frame(frame);
+  // do the actual comparison
+  cv::absdiff(first_frame, retframe, retframe);
+  // threshhold
+  cv::threshold(retframe, retframe, 75, 255, cv::THRESH_BINARY);
+  return retframe;
+}
