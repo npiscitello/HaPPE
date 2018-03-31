@@ -119,6 +119,9 @@ int main(const int argc, const char* argv[] ) {
     return RET_BADFILE;
   }
 
+  capture.set(cv::CAP_PROP_FRAME_WIDTH, 480);
+  capture.set(cv::CAP_PROP_FRAME_HEIGHT, 270);
+
   // set up first run stuff
   capture.read(inframe);
   indication_img.create(inframe.rows, inframe.cols, inframe.type());

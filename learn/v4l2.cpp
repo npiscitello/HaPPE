@@ -19,6 +19,9 @@ int main(const int argc, const char* argv[] ) {
     return RET_NOCAM;
   }
 
+  cap.set(cv::CAP_PROP_FRAME_WIDTH, 480);
+  cap.set(cv::CAP_PROP_FRAME_HEIGHT, 270);
+
   cap.read(color_image);
 
   if( argc < 2 || !color_image.data ) {
