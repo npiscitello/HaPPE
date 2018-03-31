@@ -8,6 +8,7 @@ blobs
 demo
 thresh
 v4l2
+alt_back_sub
 
 .dep
 *.eep
