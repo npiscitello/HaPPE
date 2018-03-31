@@ -10,7 +10,8 @@ local: LDFLAGS	= 	-L/usr/local/lib64 \
 cross: CC 			=		arm-linux-gnueabihf-g++
 cross: CFLAGS		= 	-I/opt/cross/rpi/rootfs/usr/include \
 			    					-I/opt/cross/rpi/rootfs/usr/include/arm-linux-gnueabihf/ \
-										-I/opt/cross/rpi/install/include/
+										-I/opt/cross/rpi/install/include/ \
+										-DCROSS
 cross: LDFLAGS 	=		-L/opt/cross/rpi/rootfs/usr/lib \
 										-L/opt/cross/rpi/install/lib \
 										-lopencv_core \
