@@ -9,7 +9,7 @@ LDFLAGS 		:= 	-L/opt/cross/rpi/rootfs/usr/lib \
 								-lwiringPi
 
 .PHONY: all
-all: spi
+all: switch
 
-spi: spi.cpp
+switch: switch.cpp
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@

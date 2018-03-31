@@ -103,8 +103,8 @@ int main(const int argc, const char* argv[] ) {
   p_detector = cv::SimpleBlobDetector::create(params);
 
   // define min and max color threshhold
-  cv::Scalar min_color = cv::Scalar(75,50,161);
-  cv::Scalar max_color = cv::Scalar(100,75,255);
+  cv::Scalar min_color = cv::Scalar(200,125,125);
+  cv::Scalar max_color = cv::Scalar(255,200,200);
   // color to copy in for the color threshholded values
   cv::Scalar indication_color = cv::Scalar(0,255,0);
   cv::Mat indication_img;

@@ -24,3 +24,5 @@ opencv: `PKG_CONFIG_LIBDIR=$PKG_CONFIG_LIBDIR:/path/to/cross/compiled/ffmpeg/lib
 
 ## Notes
 convert frames to video:  `ffmpeg -r <framerate> -i path/to/numbered/frame/images/%d.png -pix_fmt yuv420p path/to/output.mp4`
+
+Depends on crelay project for the SainSmart 4 channel USB relay board: https://ondrej1024.github.io/crelay/
