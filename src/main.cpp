@@ -17,13 +17,13 @@
 
 // how many consecutive frames the system must be in 
 // an alarm state for the alarm to actually go off
-#define ALARM_THRESH 3
+#define ALARM_THRESH 8
 
 // values for alarm control function
 #define ALARM_TRIGGER 1
 #define ALARM_RESET 0
 
-const int MINARGS = 2;
+const int MINARGS = 0;
 
 enum retvals {
   RET_OK = 0,
@@ -57,6 +57,7 @@ int main(const int argc, const char* argv[] ) {
   std::vector<cv::KeyPoint> p_keypoints;
   uint16_t alarm_frame_count = 0;
 
+  /*
   // storage for intermediate images and metadata
   std::string folder_path = std::string(argv[2]);
   mkdir(folder_path.c_str(), S_IRWXU | S_IRWXG);
@@ -71,6 +72,7 @@ int main(const int argc, const char* argv[] ) {
     return RET_BADFILE;
   }
   fprintf(metadata, "frame_number,moving_body_count,ppe_count,alarm\n");
+  */
 
   // create actual background subtractor object - history, threshhold, shadow detect
   pMOG2 = cv::createBackgroundSubtractorMOG2(20, 2000, false);
@@ -110,9 +112,10 @@ int main(const int argc, const char* argv[] ) {
   cv::Mat indication_img;
 
   // create the object to read in video frames
-  cv::VideoCapture capture(argv[1]);
+  //cv::VideoCapture capture(argv[1]);
+  cv::VideoCapture capture(0);
   if( !capture.isOpened() ) {
-    printf("Could not open file for reading: %s", argv[1]);
+    printf("Could not open device for reading\n");
     return RET_BADFILE;
   }
 
@@ -121,17 +124,22 @@ int main(const int argc, const char* argv[] ) {
   indication_img.create(inframe.rows, inframe.cols, inframe.type());
   indication_img.setTo(indication_color);
 
+  printf("Set up capturing!\n");
+
   // process!
   do {
     result = inframe;
+    /*
     // get frame number
     std::stringstream ss;
     ss << capture.get(cv::CAP_PROP_POS_FRAMES);
     std::string frameNumberString = ss.str();
+    */
 
     /***********************************
      * Human Body Detection
      ***********************************/
+    printf("Starting motion detection...\n");
     // update background model
     pMOG2->apply(inframe, m_fgmask);
     // filter the image to make coherent blobs
@@ -153,6 +161,7 @@ int main(const int argc, const char* argv[] ) {
     /***********************************
      * PPE Detection
      ***********************************/
+    printf("Starting PPE detection...\n");
     // threshhold for color
     cv::inRange(inframe, min_color, max_color, p_thresh);
     // filter the image to make coherent blobs
@@ -172,12 +181,14 @@ int main(const int argc, const char* argv[] ) {
                         cv::Scalar(0,255,0), 
                         cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
+    /*
     // write the images
     cv::imwrite(folder_path + "/m_fgmask/" + frameNumberString + ".png", m_fgmask);
     cv::imwrite(folder_path + "/m_blurframe/" + frameNumberString + ".png", m_blurframe);
     cv::imwrite(folder_path + "/p_thresh/" + frameNumberString + ".png", p_thresh);
     cv::imwrite(folder_path + "/p_blurframe/" + frameNumberString + ".png", p_blurframe);
     cv::imwrite(folder_path + "/result/" + frameNumberString + ".png", result);
+    */
 
     // increment or reset frame count
     if( m_keypoints.size() * PPE_PER_PERSON >= p_keypoints.size() ) {
@@ -189,12 +200,11 @@ int main(const int argc, const char* argv[] ) {
     // do we need to trigger the alarm?
     if( alarm_frame_count >= ALARM_THRESH ) {
       control_alarm( ALARM_TRIGGER );
-      fprintf(metadata, "!!!ALARM!!!\n");
     } else {
       control_alarm( ALARM_RESET );
-      fprintf(metadata, "<no alarm>\n");
     }
 
+    /*
     // log data
     // frame number, moving body count, ppe count
     fprintf(metadata, "%s,%zu,%zu,%d\n",
@@ -202,17 +212,19 @@ int main(const int argc, const char* argv[] ) {
         m_keypoints.size(),
         p_keypoints.size(),
         m_keypoints.size() * PPE_PER_PERSON > p_keypoints.size());
+    */
+
+    printf("Processed a frame!\n");
   } while( capture.read(inframe) );
 
   // clean up when we're done
   capture.release();
-  fclose(metadata);
+  //fclose(metadata);
 
   return RET_OK;
 }
 
 // trigger or reset alarm
-// pass a 1 to trigger the alarm or a zero to reset it
 void control_alarm( uint8_t state ) {
   switch( state ) {
     case ALARM_RESET:
