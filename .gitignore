@@ -7,7 +7,7 @@ back_sub
 blobs
 demo
 thresh
-spi
+v4l2
 
 .dep
 *.eep

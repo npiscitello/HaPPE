@@ -91,7 +91,7 @@ int main(const int argc, const char* argv[] ) {
   params.filterByConvexity = false;
   m_detector = cv::SimpleBlobDetector::create(params);
 
-  // set up motion blob detection object
+  // set up threshhold blob detection object
   params.filterByColor = true;
   params.blobColor = 255;
   params.filterByCircularity = false;
