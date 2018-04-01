@@ -17,8 +17,8 @@
 // how many pieces of PPE each person requires
 #define PPE_PER_PERSON 2
 // how many consecutive frames the system must be in 
-// an alarm state for the alarm to actually go off
-#define ALARM_THRESH 8
+// a triggered state for the alarm to actually go off
+#define ALARM_THRESH 4
 // values for alarm control function
 #define ALARM_TRIGGER 1
 #define ALARM_RESET 0
@@ -79,16 +79,16 @@ int main(const int argc, const char* argv[] ) {
     printf("Couldn't make file: %s\n", strerror(errno));
     return RET_BADFILE;
   }
-  fprintf(metadata, "frame_number,moving_body_count,ppe_count,alarm\n");
+  fprintf(metadata, "frame_number,moving_body_count,ppe_count,trigger,alarm\n");
 #endif
 
   // filter sizes
-  cv::Size m_filter_size = cv::Size(50,75);
+  cv::Size m_filter_size = cv::Size(75,150);
   cv::Size p_filter_size = cv::Size(25,25);
 
   // define min and max color threshhold
-  cv::Scalar min_color = cv::Scalar(200,125,125);
-  cv::Scalar max_color = cv::Scalar(255,200,200);
+  cv::Scalar min_color = cv::Scalar(225,100,100);
+  cv::Scalar max_color = cv::Scalar(255,255,180);
   // color to copy in for the color threshholded values
   cv::Scalar indication_color = cv::Scalar(0,255,0);
   cv::Mat indication_img;
@@ -100,8 +100,8 @@ int main(const int argc, const char* argv[] ) {
   params.filterByCircularity = false;
   params.filterByInertia = false;
   params.filterByArea = true;
-  params.minArea = 10000;
-  params.maxArea = 50000;
+  params.minArea = 25000;
+  params.maxArea = 100000;
   params.filterByConvexity = false;
   m_detector = cv::SimpleBlobDetector::create(params);
 
@@ -111,7 +111,7 @@ int main(const int argc, const char* argv[] ) {
   params.filterByCircularity = false;
   params.filterByInertia = false;
   params.filterByArea = true;
-  params.minArea = 250;
+  params.minArea = 500;
   params.maxArea = 1500;
   params.filterByConvexity = false;
   p_detector = cv::SimpleBlobDetector::create(params);
@@ -153,7 +153,6 @@ int main(const int argc, const char* argv[] ) {
     m_fgmask = backsub(inframe);
     // filter the image to make coherent blobs
     cv::morphologyEx(m_fgmask, m_blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, m_filter_size));
-    //m_blurframe = m_fgmask;
     // find blobs
     m_detector->detect(m_blurframe, m_keypoints);
 
@@ -167,7 +166,6 @@ int main(const int argc, const char* argv[] ) {
     cv::inRange(inframe, min_color, max_color, p_thresh);
     // filter the image to make coherent blobs
     cv::morphologyEx(p_thresh, p_blurframe, cv::MORPH_DILATE, cv::getStructuringElement(cv::MORPH_ELLIPSE, p_filter_size));
-    //p_blurframe = p_thresh;
     // find blobs
     p_detector->detect(p_blurframe, p_keypoints);
 
@@ -175,7 +173,7 @@ int main(const int argc, const char* argv[] ) {
      * Alarm Handling
      ***********************************/
     // increment or reset frame count
-    if( m_keypoints.size() * PPE_PER_PERSON >= p_keypoints.size() ) {
+    if( m_keypoints.size() * PPE_PER_PERSON > p_keypoints.size() ) {
       alarm_frame_count++;
     } else {
       alarm_frame_count = 0;
@@ -215,11 +213,12 @@ int main(const int argc, const char* argv[] ) {
     // log extra stuff, output extra images
     // log data
     // frame number, moving body count, ppe count
-    fprintf(metadata, "%s,%zu,%zu,%d\n",
+    fprintf(metadata, "%s,%zu,%zu,%d,%d\n",
         frameNumberString.c_str(),
         m_keypoints.size(),
         p_keypoints.size(),
-        m_keypoints.size() * PPE_PER_PERSON > p_keypoints.size());
+        m_keypoints.size() * PPE_PER_PERSON > p_keypoints.size(),
+        alarm_frame_count >= ALARM_THRESH );
     // draw motion blobs on video
     cv::drawKeypoints(  m_fgmask, 
                         m_keypoints, 
