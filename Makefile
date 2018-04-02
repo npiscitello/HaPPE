@@ -26,7 +26,6 @@ cross: LDFLAGS 	=		-L/opt/cross/rpi/rootfs/usr/lib \
 SRC_DIR					:= src
 CSRCS						:= $(wildcard $(SRC_DIR)/*.cpp)
 
-BUILD_DIR 			:= build
 MAIN 						:= HaPPE
 
 all: local
@@ -42,15 +41,11 @@ cross: build_tgt
 # to make sure all the appropriate variables are set
 build_tgt: $(MAIN)
 
-$(BUILD_DIR):
-	mkdir -p $@
-
 # this is fragile - see the makefile in github.com/npiscitello/MegaWeather if you need to make it
 # more complex
-$(MAIN): $(SRC_DIR)/main.cpp | $(BUILD_DIR)
+$(MAIN): $(SRC_DIR)/main.cpp
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 .PHONY: clean
 clean:
 	rm $(MAIN)
-	rm -r $(BUILD_DIR)

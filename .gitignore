@@ -2,6 +2,8 @@
 
 HaPPE
 
+process/*
+
 greyscale
 back_sub
 blobs
