@@ -23,6 +23,10 @@
 #define ALARM_TRIGGER 1
 #define ALARM_RESET 0
 
+// how many consecutive frames there must be no motion
+// to update the background frame
+#define BACKGROUND_THRESH 3
+
 #ifndef CROSS
 const int MINARGS = 2;
 #else
@@ -39,7 +43,7 @@ enum retvals {
 cv::Ptr<cv::SimpleBlobDetector> m_detector;
 cv::Ptr<cv::SimpleBlobDetector> p_detector;
 
-cv::Mat first_frame;
+cv::Mat background_frame;
 
 cv::Mat backsub(cv::Mat frame);
 cv::Mat filter_frame(cv::Mat frame);
@@ -57,6 +61,7 @@ int main(const int argc, const char* argv[] ) {
   std::vector<cv::KeyPoint> m_keypoints;
   std::vector<cv::KeyPoint> p_keypoints;
   uint16_t alarm_frame_count = 0;
+  uint16_t background_frame_count = 0;
 
   if( argc < MINARGS + 1 ) {
     printf("Not enough args!\n");
@@ -133,11 +138,11 @@ int main(const int argc, const char* argv[] ) {
 #endif
 
   // set up first run stuff
-  capture.read(first_frame);
-  indication_img.create(first_frame.rows, first_frame.cols, first_frame.type());
+  capture.read(background_frame);
+  indication_img.create(background_frame.rows, background_frame.cols, background_frame.type());
   indication_img.setTo(indication_color);
-  first_frame = filter_frame(first_frame);
-  indication_img.create(first_frame.rows, first_frame.cols, first_frame.type());
+  background_frame = filter_frame(background_frame);
+  indication_img.create(background_frame.rows, background_frame.cols, background_frame.type());
   indication_img.setTo(indication_color);
 
   // process!
@@ -186,7 +191,21 @@ int main(const int argc, const char* argv[] ) {
     }
 
     /***********************************
-     * Image Output
+     * Background Management
+     ***********************************/
+    // increment or reset frame count
+    if( m_keypoints.size() == 0 ) {
+      background_frame_count++;
+    } else {
+      background_frame_count = 0;
+    }
+    // do we need to update the background?
+    if( background_frame_count >= BACKGROUND_THRESH ) {
+      background_frame = filter_frame(inframe);
+    }
+
+    /***********************************
+     * Image and Logging Output
      ***********************************/
     std::stringstream ss;
 #ifndef CROSS
@@ -286,7 +305,7 @@ cv::Mat filter_frame(cv::Mat frame) {
 cv::Mat backsub(cv::Mat frame) {
   cv::Mat retframe = filter_frame(frame);
   // do the actual comparison
-  cv::absdiff(first_frame, retframe, retframe);
+  cv::absdiff(background_frame, retframe, retframe);
   // threshhold
   cv::threshold(retframe, retframe, 75, 255, cv::THRESH_BINARY);
   return retframe;
