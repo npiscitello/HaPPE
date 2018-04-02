@@ -115,9 +115,9 @@ int main(const int argc, const char* argv[] ) {
   params.blobColor = 255;
   params.filterByCircularity = false;
   params.filterByInertia = false;
-  params.filterByArea = true;
-  params.minArea = 500;
-  params.maxArea = 1500;
+  params.filterByArea = false;
+  params.minArea = 250;
+  params.maxArea = 2500;
   params.filterByConvexity = false;
   p_detector = cv::SimpleBlobDetector::create(params);
 
