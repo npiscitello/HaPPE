@@ -238,17 +238,6 @@ int main(const int argc, const char* argv[] ) {
         p_keypoints.size(),
         m_keypoints.size() * PPE_PER_PERSON > p_keypoints.size(),
         alarm_frame_count >= ALARM_THRESH );
-    // draw motion blobs on video
-    cv::drawKeypoints(  m_fgmask, 
-                        m_keypoints, 
-                        m_fgmask, 
-                        cv::Scalar(0,0,255), 
-                        cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    cv::drawKeypoints(  m_blurframe, 
-                        m_keypoints, 
-                        m_blurframe, 
-                        cv::Scalar(0,0,255), 
-                        cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
     // prepare result frame
     cv::drawKeypoints(  inframe, 
                         m_keypoints, 
