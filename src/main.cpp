@@ -186,6 +186,10 @@ int main(const int argc, const char* argv[] ) {
     // do we need to trigger the alarm?
     if( alarm_frame_count >= ALARM_THRESH ) {
       control_alarm( ALARM_TRIGGER );
+#ifdef VISIBLE_ALARM
+      // draw a red dot in the corner to signify an alarm
+      cv::circle(inframe, cv::Point(30,30), 25, cv::Scalar(63,63,255), -1);
+#endif
     } else {
       control_alarm( ALARM_RESET );
     }
@@ -296,6 +300,6 @@ cv::Mat backsub(cv::Mat frame) {
   // do the actual comparison
   cv::absdiff(background_frame, retframe, retframe);
   // threshhold
-  cv::threshold(retframe, retframe, 75, 255, cv::THRESH_BINARY);
+  cv::threshold(retframe, retframe, 60, 255, cv::THRESH_BINARY);
   return retframe;
 }

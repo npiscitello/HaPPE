@@ -1,5 +1,6 @@
 local: CC				= 	g++
-local: CFLAGS		= 	-I/usr/local/include
+local: CFLAGS		= 	-I/usr/local/include \
+										-DVISIBLE_ALARM
 local: LDFLAGS	= 	-L/usr/local/lib64 \
 										-lopencv_core \
 										-lopencv_imgcodecs \
