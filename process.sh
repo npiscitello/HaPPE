@@ -26,12 +26,12 @@ export FRAMES_DIR=frames
 # generate composite video
 # origin at top left corner
 # in0: composite background, makes up bounds
-# in1: source video, centered at (168,320), must be advanced by one frame due to processing
+# in1: source video, centered at (33,180), scaled up by 1.5x, must be advanced by one frame due to processing
 # in2: motion thresh, centered at (606,60)
 # in3: motion blobs, centered at (1044,60)
 # in4: ppe thresh, centered at (606,580)
 # in5: ppe blobs, centered at (1044,580)
-# in6: result, centered at (1482,320)
+# in6: result, centered at (1482,320), scaled up by 1.5x
 # overlay everything
 # set the pixel format to play nice with video players, strip the audio
 ffmpeg \
@@ -42,7 +42,14 @@ ffmpeg \
   -r 10 -i $PROC_DIR/$FRAMES_DIR/p_thresh/%d.png \
   -r 10 -i $PROC_DIR/$FRAMES_DIR/p_blurframe/%d.png \
   -r 10 -i $PROC_DIR/$FRAMES_DIR/result/%d.png \
-  -filter_complex 'overlay=x=168:y=320,overlay=x=606:y=60,overlay=x=1044:y=60,overlay=x=606:y=580,overlay=x=1044:y=580,overlay=x=1482:y=320' \
+  -filter_complex  '[1:v]scale=406:720 [src];
+                    [6:v]scale=406:720 [res];
+                    [0:v][src]overlay=x=32:y=180 [s1];
+                    [s1][2:v]overlay=x=606:y=60 [s2],
+                    [s2][3:v]overlay=x=1044:y=60 [s3],
+                    [s3][4:v]overlay=x=606:y=580 [s4],
+                    [s4][5:v]overlay=x=1044:y=580 [s5],
+                    [s5][res]overlay=x=1482:y=180'\
   -pix_fmt yuv420p -an \
   $2
 
