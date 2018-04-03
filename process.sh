@@ -49,7 +49,8 @@ ffmpeg \
                     [s2][3:v]overlay=x=1044:y=60 [s3],
                     [s3][4:v]overlay=x=606:y=580 [s4],
                     [s4][5:v]overlay=x=1044:y=580 [s5],
-                    [s5][res]overlay=x=1482:y=180'\
+                    [s5][res]overlay=x=1482:y=180 [full];
+                    [full]loop=4:200'\
   -pix_fmt yuv420p -an \
   $2
 
